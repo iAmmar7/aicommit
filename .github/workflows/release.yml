@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+# Required for npm trusted publishing (OIDC) and creating GitHub releases
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    name: Publish & Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 24 is required for npm >=11.5.1 which supports trusted publishing
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          # Must be explicit — triggers setup-node to write .npmrc for auth
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      # Publishes with provenance attestation via OIDC (no NPM_TOKEN needed).
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create ${{ github.ref_name }} --generate-notes
+
