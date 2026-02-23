@@ -140,7 +140,7 @@ After a commit message is generated, you are given three options:
 Contributions are welcome. Please open an issue first to discuss significant changes.
 
 ```bash
-git clone https://github.com/iammar7/aicommit.git
+git clone https://github.com/iAmmar7/aicommit.git
 cd aicommit
 npm install
 npm run build

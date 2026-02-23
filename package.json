@@ -33,9 +33,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iammar7/aicommit.git"
+    "url": "git+https://github.com/iAmmar7/aicommit.git"
   },
-  "homepage": "https://github.com/iammar7/aicommit#readme",
+  "homepage": "https://github.com/iAmmar7/aicommit#readme",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^25.3.0",
