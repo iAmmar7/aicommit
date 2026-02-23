@@ -187,7 +187,7 @@ export async function run(
   // Resolve API key for cloud: env var -> saved config -> prompt
   let apiKey: string | undefined;
   if (provider === 'cloud') {
-    apiKey = env.OLLAMA_API_KEY ?? savedConfig.apiKey;
+    apiKey = env.OLLAMA_API_KEY?.trim() || savedConfig.apiKey?.trim() || undefined;
     if (!apiKey) {
       if (!process.stdin.isTTY) {
         console.error(

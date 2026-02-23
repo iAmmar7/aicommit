@@ -36,8 +36,11 @@ export async function getLocalModels(
     throw new OllamaError(`Ollama returned an error: ${response.status} ${response.statusText}`);
   }
 
-  const data = (await response.json()) as { models: { name: string }[] };
-  return data.models.map((m) => m.name);
+  const data = await response.json();
+  if (!Array.isArray(data?.models)) {
+    throw new OllamaError('Unexpected response from Ollama: missing "models" list');
+  }
+  return (data.models as { name: string }[]).map((m) => m.name);
 }
 
 export async function generateCommitMessage(
@@ -83,11 +86,15 @@ export async function generateCommitMessage(
     throw new OllamaError(`Ollama returned an error: ${response.status} ${response.statusText}`);
   }
 
-  const data = (await response.json()) as { message: { content: string } };
+  const data = await response.json();
 
   if (config.debug) {
     console.error('\n[DEBUG] Raw response:\n', JSON.stringify(data, null, 2));
   }
 
-  return data.message.content.trim();
+  const content = data?.message?.content;
+  if (typeof content !== 'string') {
+    throw new OllamaError('Unexpected response from Ollama: missing "message.content"');
+  }
+  return content.trim();
 }
