@@ -10,6 +10,8 @@ describe('parseArgs', () => {
       help: false,
       version: false,
       setup: false,
+      reset: false,
+      yes: false,
     });
   });
 
@@ -59,6 +61,18 @@ describe('parseArgs', () => {
 
   it('parses --setup', () => {
     expect(parseArgs(['--setup']).setup).toBe(true);
+  });
+
+  it('parses --reset', () => {
+    expect(parseArgs(['--reset']).reset).toBe(true);
+  });
+
+  it('parses --yes', () => {
+    expect(parseArgs(['--yes']).yes).toBe(true);
+  });
+
+  it('parses -y shorthand', () => {
+    expect(parseArgs(['-y']).yes).toBe(true);
   });
 
   it('parses combined flags', () => {

@@ -137,6 +137,11 @@ export async function promptInput(question: string): Promise<string> {
   return answer.trim();
 }
 
+export async function confirm(question: string): Promise<boolean> {
+  const answer = await promptInput(`${question} [y/N] `);
+  return answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes';
+}
+
 export async function editMessage(original: string): Promise<string> {
   const rl = readline.createInterface({
     input: process.stdin,

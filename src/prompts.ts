@@ -30,6 +30,8 @@ Options:
   --anthropic          Use Anthropic (Claude) for this run
   --openai             Use OpenAI (Codex/GPT) for this run
   --setup              Re-run the setup wizard to change saved defaults
+  --reset              Delete saved settings and return to defaults
+  -y, --yes            Skip confirmation prompt (use with --reset)
   -v, --version        Print version
   -h, --help           Show this help
 
@@ -47,6 +49,8 @@ Examples:
   aicommit --openai --model codex-mini-latest
   aicommit --cloud --model devstral-2
   aicommit --setup
+  aicommit --reset
+  aicommit --reset --yes
   ANTHROPIC_API_KEY=sk-ant-... aicommit
   OPENAI_API_KEY=sk-... aicommit
   OLLAMA_API_KEY=sk-... aicommit
