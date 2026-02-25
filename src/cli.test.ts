@@ -2,15 +2,17 @@ import { describe, it, expect, vi, beforeEach, beforeAll, afterEach } from 'vite
 import * as configModule from './config.js';
 import * as gitModule from './git.js';
 import * as ollamaModule from './ollama.js';
-import * as promptModule from './prompt.js';
+import * as anthropicModule from './anthropic.js';
+import * as promptModule from './tui.js';
 import * as spinnerModule from './spinner.js';
 import { readFileSync } from 'fs';
-import { GitError, OllamaError } from './errors.js';
+import { GitError, OllamaError, AnthropicError } from './errors.js';
 
 vi.mock('./config.js');
 vi.mock('./git.js');
 vi.mock('./ollama.js');
-vi.mock('./prompt.js');
+vi.mock('./anthropic.js');
+vi.mock('./tui.js');
 vi.mock('./spinner.js');
 vi.mock('fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('fs')>();
@@ -48,19 +50,26 @@ describe('run', () => {
       setup: false,
     });
 
-    // Default: saved config has local + llama3.1 (no interactive needed)
+    // Default: saved config has ollama/local + llama3.2 (no interactive needed)
     vi.mocked(configModule.readUserConfig).mockReturnValue({
-      provider: 'local',
-      model: 'llama3.1',
+      provider: 'ollama',
+      ollamaMode: 'local',
+      model: 'llama3.2',
     });
     vi.mocked(configModule.writeUserConfig).mockImplementation(() => {});
 
-    vi.mocked(configModule.buildOllamaChatUrl).mockReturnValue(LOCAL_URL);
-    vi.mocked(configModule.buildOllamaTagsUrl).mockReturnValue(TAGS_URL);
-    // Dynamic mock: return a config using the provider/model args passed in
-    vi.mocked(configModule.buildConfig).mockImplementation((provider, model) => ({
-      provider: provider as 'local' | 'cloud',
-      ollamaUrl: provider === 'local' ? LOCAL_URL : 'https://ollama.com/api/chat',
+    vi.mocked(ollamaModule.buildOllamaChatUrl).mockReturnValue(LOCAL_URL);
+    vi.mocked(ollamaModule.buildOllamaTagsUrl).mockReturnValue(TAGS_URL);
+    // Dynamic mock: return a config using the provider/ollamaMode/model args passed in
+    vi.mocked(configModule.buildConfig).mockImplementation(({ provider, ollamaMode, model }) => ({
+      provider,
+      ollamaMode: provider === 'ollama' ? ollamaMode : undefined,
+      url:
+        provider === 'ollama'
+          ? ollamaMode === 'cloud'
+            ? 'https://ollama.com/api/chat'
+            : LOCAL_URL
+          : '',
       model: model as string,
       debug: false,
     }));
@@ -68,8 +77,9 @@ describe('run', () => {
     vi.mocked(promptModule.promptInput).mockResolvedValue('');
 
     vi.mocked(gitModule.getStagedDiff).mockReturnValue('diff --git a/foo.ts b/foo.ts\n+hello');
-    vi.mocked(ollamaModule.getLocalModels).mockResolvedValue(['llama3.1']);
+    vi.mocked(ollamaModule.getLocalModels).mockResolvedValue(['llama3.2']);
     vi.mocked(ollamaModule.generateCommitMessage).mockResolvedValue('feat: add login');
+    vi.mocked(anthropicModule.generateCommitMessage).mockResolvedValue('feat: add login');
     vi.mocked(promptModule.promptUser).mockResolvedValue('accept');
     vi.mocked(promptModule.selectFromList).mockResolvedValue('local');
     vi.mocked(gitModule.runCommit).mockReturnValue(0);
@@ -140,8 +150,9 @@ describe('run', () => {
 
   it('uses saved local provider without showing picker', async () => {
     vi.mocked(configModule.readUserConfig).mockReturnValue({
-      provider: 'local',
-      model: 'llama3.1',
+      provider: 'ollama',
+      ollamaMode: 'local',
+      model: 'llama3.2',
     });
     await run();
     expect(promptModule.selectFromList).not.toHaveBeenCalled();
@@ -151,16 +162,17 @@ describe('run', () => {
   it('shows interactive picker on first run (no saved config)', async () => {
     vi.mocked(configModule.readUserConfig).mockReturnValue({});
     vi.mocked(promptModule.selectFromList)
-      .mockResolvedValueOnce('local') // provider picker
-      .mockResolvedValueOnce('llama3.1'); // model picker
-    vi.mocked(ollamaModule.getLocalModels).mockResolvedValue(['llama3.1', 'mistral']);
+      .mockResolvedValueOnce('ollama-local') // provider picker
+      .mockResolvedValueOnce('llama3.2'); // model picker
+    vi.mocked(ollamaModule.getLocalModels).mockResolvedValue(['llama3.2', 'mistral']);
 
     await run();
 
     expect(promptModule.selectFromList).toHaveBeenCalledTimes(2);
     expect(configModule.writeUserConfig).toHaveBeenCalledWith({
-      provider: 'local',
-      model: 'llama3.1',
+      provider: 'ollama',
+      ollamaMode: 'local',
+      model: 'llama3.2',
     });
   });
 
@@ -169,7 +181,8 @@ describe('run', () => {
       help: false,
       version: false,
       setup: false,
-      provider: 'local',
+      provider: 'ollama',
+      ollamaMode: 'local',
     });
     vi.mocked(configModule.readUserConfig).mockReturnValue({});
     vi.mocked(ollamaModule.getLocalModels).mockResolvedValue(['mistral']);
@@ -185,12 +198,14 @@ describe('run', () => {
       help: false,
       version: false,
       setup: false,
-      provider: 'cloud',
+      provider: 'ollama',
+      ollamaMode: 'cloud',
     });
     vi.mocked(configModule.readUserConfig).mockReturnValue({});
     vi.mocked(configModule.buildConfig).mockReturnValue({
-      provider: 'cloud',
-      ollamaUrl: 'https://ollama.com/api/chat',
+      provider: 'ollama',
+      ollamaMode: 'cloud',
+      url: 'https://ollama.com/api/chat',
       model: 'devstral-2',
       apiKey: 'sk-test',
       debug: false,
@@ -205,8 +220,9 @@ describe('run', () => {
     vi.mocked(configModule.readUserConfig).mockReturnValue({});
     vi.mocked(promptModule.promptInput).mockResolvedValue('devstral-small-2:24b');
     vi.mocked(configModule.buildConfig).mockReturnValue({
-      provider: 'cloud',
-      ollamaUrl: 'https://ollama.com/api/chat',
+      provider: 'ollama',
+      ollamaMode: 'cloud',
+      url: 'https://ollama.com/api/chat',
       model: 'devstral-small-2:24b',
       apiKey: 'sk-test',
       debug: false,
@@ -219,7 +235,8 @@ describe('run', () => {
 
   it('exits with code 1 when cloud is selected but OLLAMA_API_KEY is not set', async () => {
     vi.mocked(configModule.readUserConfig).mockReturnValue({
-      provider: 'cloud',
+      provider: 'ollama',
+      ollamaMode: 'cloud',
       model: 'devstral-2',
     });
 
@@ -234,29 +251,32 @@ describe('run', () => {
       setup: true,
     });
     vi.mocked(configModule.readUserConfig).mockReturnValue({
-      provider: 'local',
-      model: 'llama3.1',
+      provider: 'ollama',
+      ollamaMode: 'local',
+      model: 'llama3.2',
     });
     vi.mocked(promptModule.selectFromList)
-      .mockResolvedValueOnce('local') // provider picker
+      .mockResolvedValueOnce('ollama-local') // provider picker
       .mockResolvedValueOnce('mistral'); // model picker
-    vi.mocked(ollamaModule.getLocalModels).mockResolvedValue(['llama3.1', 'mistral']);
+    vi.mocked(ollamaModule.getLocalModels).mockResolvedValue(['llama3.2', 'mistral']);
 
     await run(['--setup']);
 
     expect(promptModule.selectFromList).toHaveBeenCalledTimes(2);
     expect(configModule.writeUserConfig).toHaveBeenCalledWith({
-      provider: 'local',
+      provider: 'ollama',
+      ollamaMode: 'local',
       model: 'mistral',
     });
   });
 
   it('uses saved local model silently when it is still installed', async () => {
     vi.mocked(configModule.readUserConfig).mockReturnValue({
-      provider: 'local',
+      provider: 'ollama',
+      ollamaMode: 'local',
       model: 'mistral',
     });
-    vi.mocked(ollamaModule.getLocalModels).mockResolvedValue(['llama3.1', 'mistral']);
+    vi.mocked(ollamaModule.getLocalModels).mockResolvedValue(['llama3.2', 'mistral']);
 
     await run();
 
@@ -269,17 +289,19 @@ describe('run', () => {
 
   it('shows model picker when saved model is no longer installed', async () => {
     vi.mocked(configModule.readUserConfig).mockReturnValue({
-      provider: 'local',
+      provider: 'ollama',
+      ollamaMode: 'local',
       model: 'removed-model',
     });
-    vi.mocked(ollamaModule.getLocalModels).mockResolvedValue(['llama3.1', 'mistral']);
+    vi.mocked(ollamaModule.getLocalModels).mockResolvedValue(['llama3.2', 'mistral']);
     vi.mocked(promptModule.selectFromList).mockResolvedValueOnce('mistral');
 
     await run();
 
     expect(promptModule.selectFromList).toHaveBeenCalledTimes(1);
     expect(configModule.writeUserConfig).toHaveBeenCalledWith({
-      provider: 'local',
+      provider: 'ollama',
+      ollamaMode: 'local',
       model: 'mistral',
     });
   });
@@ -292,17 +314,16 @@ describe('run', () => {
       model: 'codellama',
     });
     vi.mocked(configModule.readUserConfig).mockReturnValue({
-      provider: 'local',
-      model: 'llama3.1',
+      provider: 'ollama',
+      ollamaMode: 'local',
+      model: 'llama3.2',
     });
 
     await run(['--model', 'codellama']);
 
     expect(promptModule.selectFromList).not.toHaveBeenCalled();
     expect(configModule.buildConfig).toHaveBeenCalledWith(
-      'local',
-      'codellama',
-      undefined,
+      { provider: 'ollama', ollamaMode: 'local', model: 'codellama', apiKey: undefined },
       expect.any(Object),
     );
     expect(configModule.writeUserConfig).not.toHaveBeenCalled();
@@ -312,8 +333,9 @@ describe('run', () => {
     vi.mocked(configModule.readUserConfig).mockReturnValue({});
     vi.mocked(promptModule.promptInput).mockResolvedValue('');
     vi.mocked(configModule.buildConfig).mockReturnValue({
-      provider: 'cloud',
-      ollamaUrl: 'https://ollama.com/api/chat',
+      provider: 'ollama',
+      ollamaMode: 'cloud',
+      url: 'https://ollama.com/api/chat',
       model: 'devstral-small-2:24b',
       apiKey: 'sk-test',
       debug: false,
@@ -323,16 +345,15 @@ describe('run', () => {
 
     expect(promptModule.selectFromList).not.toHaveBeenCalled();
     expect(configModule.buildConfig).toHaveBeenCalledWith(
-      'cloud',
-      'devstral-small-2:24b',
-      'sk-test',
+      { provider: 'ollama', ollamaMode: 'cloud', model: 'devstral-small-2:24b', apiKey: 'sk-test' },
       expect.any(Object),
     );
   });
 
   it('exits with code 1 when no local models are installed', async () => {
     vi.mocked(configModule.readUserConfig).mockReturnValue({
-      provider: 'local',
+      provider: 'ollama',
+      ollamaMode: 'local',
       model: undefined,
     });
     vi.mocked(ollamaModule.getLocalModels).mockResolvedValue([]);
@@ -343,7 +364,8 @@ describe('run', () => {
 
   it('exits with code 1 when getLocalModels throws OllamaError', async () => {
     vi.mocked(configModule.readUserConfig).mockReturnValue({
-      provider: 'local',
+      provider: 'ollama',
+      ollamaMode: 'local',
     });
     vi.mocked(ollamaModule.getLocalModels).mockRejectedValue(
       new OllamaError('Could not connect to Ollama'),
@@ -355,7 +377,8 @@ describe('run', () => {
 
   it('exits with code 1 when getLocalModels throws a non-OllamaError', async () => {
     vi.mocked(configModule.readUserConfig).mockReturnValue({
-      provider: 'local',
+      provider: 'ollama',
+      ollamaMode: 'local',
     });
     vi.mocked(ollamaModule.getLocalModels).mockRejectedValue('raw error');
 
@@ -366,7 +389,7 @@ describe('run', () => {
   it('prints provider and model before generating', async () => {
     await run();
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Local'));
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('llama3.1'));
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('llama3.2'));
   });
 
   it('exits with code 1 when getStagedDiff throws GitError', async () => {
@@ -471,5 +494,100 @@ describe('run', () => {
     vi.mocked(gitModule.runCommit).mockReturnValue(1);
 
     await expect(run()).rejects.toThrow('process.exit(1)');
+  });
+
+  // Anthropic provider
+  it('ANTHROPIC_API_KEY env var triggers anthropic provider without picker', async () => {
+    vi.mocked(configModule.readUserConfig).mockReturnValue({});
+    vi.mocked(promptModule.selectFromList).mockResolvedValueOnce('claude-sonnet-4-6');
+
+    await run([], { ANTHROPIC_API_KEY: 'sk-ant-test' });
+
+    expect(promptModule.selectFromList).toHaveBeenCalledTimes(1); // model picker only
+    expect(configModule.buildConfig).toHaveBeenCalledWith(
+      { provider: 'anthropic', ollamaMode: undefined, model: 'claude-sonnet-4-6', apiKey: 'sk-ant-test' },
+      expect.any(Object),
+    );
+  });
+
+  it('--anthropic flag uses anthropic provider without provider picker', async () => {
+    vi.mocked(configModule.parseArgs).mockReturnValue({
+      help: false,
+      version: false,
+      setup: false,
+      provider: 'anthropic',
+    });
+    vi.mocked(configModule.readUserConfig).mockReturnValue({
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-6',
+      apiKey: 'sk-ant-saved',
+    });
+
+    await run(['--anthropic'], { ANTHROPIC_API_KEY: 'sk-ant-test' });
+
+    expect(promptModule.selectFromList).not.toHaveBeenCalled();
+    expect(configModule.buildConfig).toHaveBeenCalledWith(
+      { provider: 'anthropic', ollamaMode: undefined, model: 'claude-sonnet-4-6', apiKey: 'sk-ant-test' },
+      expect.any(Object),
+    );
+  });
+
+  it('uses saved anthropic model silently', async () => {
+    vi.mocked(configModule.readUserConfig).mockReturnValue({
+      provider: 'anthropic',
+      model: 'claude-haiku-4-5-20251001',
+      apiKey: 'sk-ant-saved',
+    });
+
+    await run([], {});
+
+    expect(promptModule.selectFromList).not.toHaveBeenCalled();
+    expect(anthropicModule.generateCommitMessage).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ model: 'claude-haiku-4-5-20251001' }),
+    );
+  });
+
+  it('exits with code 1 when anthropic is selected but no API key is available', async () => {
+    vi.mocked(configModule.readUserConfig).mockReturnValue({
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-6',
+    });
+
+    await expect(run([], {})).rejects.toThrow('process.exit(1)');
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('ANTHROPIC_API_KEY'));
+  });
+
+  it('does not use saved apiKey from a different provider for cloud', async () => {
+    // savedConfig has anthropic key; user switches to cloud — should NOT use the anthropic key
+    vi.mocked(configModule.readUserConfig).mockReturnValue({
+      provider: 'anthropic',
+      apiKey: 'sk-ant-wrong-key',
+    });
+    vi.mocked(configModule.parseArgs).mockReturnValue({
+      help: false,
+      version: false,
+      setup: false,
+      provider: 'ollama',
+      ollamaMode: 'cloud',
+    });
+
+    // No OLLAMA_API_KEY env var and wrong saved key → should fail asking for cloud key
+    await expect(run(['--cloud'], {})).rejects.toThrow('process.exit(1)');
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('OLLAMA_API_KEY'));
+  });
+
+  it('exits with code 1 when generateCommitMessage (anthropic) throws AnthropicError', async () => {
+    vi.mocked(configModule.readUserConfig).mockReturnValue({
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-6',
+      apiKey: 'sk-ant-test',
+    });
+    vi.mocked(anthropicModule.generateCommitMessage).mockRejectedValue(
+      new AnthropicError('Invalid API key'),
+    );
+
+    await expect(run([], {})).rejects.toThrow('process.exit(1)');
+    expect(errorSpy).toHaveBeenCalledWith('Invalid API key');
   });
 });
