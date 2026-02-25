@@ -8,10 +8,10 @@ export function getUserConfigPath(): string {
   const home = homedir();
   if (process.platform === 'win32') {
     const appData = process.env.APPDATA || join(home, 'AppData', 'Roaming');
-    return join(appData, 'aicommit', 'config.json');
+    return join(appData, 'penmit', 'config.json');
   }
   const xdgConfig = process.env.XDG_CONFIG_HOME || join(home, '.config');
-  return join(xdgConfig, 'aicommit', 'config.json');
+  return join(xdgConfig, 'penmit', 'config.json');
 }
 
 export function readUserConfig(configPath = getUserConfigPath()): UserConfig {

@@ -1,10 +1,10 @@
 {
   "name": "penmit",
   "version": "1.2.0",
-  "description": "AI-powered git commit message generator using Ollama - local or cloud",
+  "description": "AI-powered git commit message generator using Ollama, Anthropic, or OpenAI",
   "type": "module",
   "bin": {
-    "aicommit": "dist/index.js"
+    "penmit": "dist/index.js"
   },
   "files": [
     "dist"
@@ -27,15 +27,17 @@
     "ai",
     "commit",
     "ollama",
+    "anthropic",
+    "openai",
     "cli"
   ],
   "author": "Ammar Ansari <iammaransari@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iAmmar7/aicommit.git"
+    "url": "git+https://github.com/iAmmar7/penmit.git"
   },
-  "homepage": "https://github.com/iAmmar7/aicommit#readme",
+  "homepage": "https://github.com/iAmmar7/penmit#readme",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^25.3.0",

@@ -78,7 +78,7 @@ describe('run', () => {
 
     vi.mocked(promptModule.promptInput).mockResolvedValue('');
     vi.mocked(promptModule.confirm).mockResolvedValue(true);
-    vi.mocked(configModule.getUserConfigPath).mockReturnValue('/fake/.config/aicommit/config.json');
+    vi.mocked(configModule.getUserConfigPath).mockReturnValue('/fake/.config/penmit/config.json');
     vi.mocked(existsSync).mockReturnValue(false);
 
     vi.mocked(gitModule.getStagedDiff).mockReturnValue('diff --git a/foo.ts b/foo.ts\n+hello');
@@ -123,7 +123,7 @@ describe('run', () => {
     it('prints help text and returns when --help is passed', async () => {
       vi.mocked(configModule.parseArgs).mockReturnValue({ ...DEFAULT_ARGS, help: true });
       await run(['--help']);
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('aicommit'));
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('penmit'));
       expect(exitSpy).not.toHaveBeenCalled();
     });
 

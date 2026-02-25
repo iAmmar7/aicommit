@@ -229,26 +229,26 @@ describe('getUserConfigPath', () => {
   it('uses XDG_CONFIG_HOME on Linux when set', () => {
     setPlatform('linux');
     vi.stubEnv('XDG_CONFIG_HOME', '/custom/config');
-    expect(getUserConfigPath()).toBe('/custom/config/aicommit/config.json');
+    expect(getUserConfigPath()).toBe('/custom/config/penmit/config.json');
   });
 
   it('falls back to ~/.config on Linux when XDG_CONFIG_HOME is not set', () => {
     setPlatform('linux');
     vi.stubEnv('XDG_CONFIG_HOME', '');
-    expect(getUserConfigPath()).toBe(join(homedir(), '.config', 'aicommit', 'config.json'));
+    expect(getUserConfigPath()).toBe(join(homedir(), '.config', 'penmit', 'config.json'));
   });
 
   it('uses ~/.config on macOS by default', () => {
     setPlatform('darwin');
     vi.stubEnv('XDG_CONFIG_HOME', '');
-    expect(getUserConfigPath()).toBe(join(homedir(), '.config', 'aicommit', 'config.json'));
+    expect(getUserConfigPath()).toBe(join(homedir(), '.config', 'penmit', 'config.json'));
   });
 
   it('uses APPDATA on Windows when set', () => {
     setPlatform('win32');
     vi.stubEnv('APPDATA', 'C:\\Users\\user\\AppData\\Roaming');
     expect(getUserConfigPath()).toBe(
-      join('C:\\Users\\user\\AppData\\Roaming', 'aicommit', 'config.json'),
+      join('C:\\Users\\user\\AppData\\Roaming', 'penmit', 'config.json'),
     );
   });
 
@@ -256,14 +256,14 @@ describe('getUserConfigPath', () => {
     setPlatform('win32');
     vi.stubEnv('APPDATA', '');
     expect(getUserConfigPath()).toBe(
-      join(homedir(), 'AppData', 'Roaming', 'aicommit', 'config.json'),
+      join(homedir(), 'AppData', 'Roaming', 'penmit', 'config.json'),
     );
   });
 });
 
 describe('readUserConfig', () => {
   it('reads and parses a valid config file', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'aicommit-test-'));
+    const dir = mkdtempSync(join(tmpdir(), 'penmit-test-'));
     const configPath = join(dir, 'config.json');
     writeFileSync(configPath, JSON.stringify({ provider: 'ollama', model: 'llama3.2' }), 'utf8');
     expect(readUserConfig(configPath)).toEqual({ provider: 'ollama', model: 'llama3.2' });
@@ -271,11 +271,11 @@ describe('readUserConfig', () => {
   });
 
   it('returns empty object when file does not exist', () => {
-    expect(readUserConfig('/nonexistent/aicommit-path/config.json')).toEqual({});
+    expect(readUserConfig('/nonexistent/penmit-path/config.json')).toEqual({});
   });
 
   it('returns empty object when file contains invalid JSON', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'aicommit-test-'));
+    const dir = mkdtempSync(join(tmpdir(), 'penmit-test-'));
     const configPath = join(dir, 'config.json');
     writeFileSync(configPath, 'not valid json', 'utf8');
     expect(readUserConfig(configPath)).toEqual({});
@@ -285,7 +285,7 @@ describe('readUserConfig', () => {
 
 describe('writeUserConfig', () => {
   it('creates nested directories and writes formatted JSON', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'aicommit-test-'));
+    const dir = mkdtempSync(join(tmpdir(), 'penmit-test-'));
     const configPath = join(dir, 'nested', 'config.json');
     const config = { provider: 'anthropic' as const, model: 'claude-sonnet-4-6' };
     writeUserConfig(config, configPath);
@@ -297,11 +297,11 @@ describe('writeUserConfig', () => {
 
 describe('deleteUserConfig', () => {
   it('returns false when file does not exist', () => {
-    expect(deleteUserConfig('/nonexistent/aicommit-path/config.json')).toBe(false);
+    expect(deleteUserConfig('/nonexistent/penmit-path/config.json')).toBe(false);
   });
 
   it('deletes file and returns true when file exists', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'aicommit-test-'));
+    const dir = mkdtempSync(join(tmpdir(), 'penmit-test-'));
     const configPath = join(dir, 'config.json');
     writeFileSync(configPath, '{}', 'utf8');
     expect(deleteUserConfig(configPath)).toBe(true);

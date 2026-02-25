@@ -58,7 +58,7 @@ export async function resolveApiKey(
 
   if (!process.stdin.isTTY) {
     console.error(
-      `${label} provider requires ${envVarName}.\nSet it with: ${envVarName}=... aicommit`,
+      `${label} provider requires ${envVarName}.\nSet it with: ${envVarName}=... penmit`,
     );
     process.exit(1);
   }

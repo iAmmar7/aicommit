@@ -18,10 +18,10 @@ ${diff}
 
 // CLI help text
 export const HELP_TEXT = `
-aicommit - AI-powered git commit message generator
+penmit - AI-powered git commit message generator
 
 Usage:
-  aicommit [options]
+  penmit [options]
 
 Options:
   -m, --model <name>   Model to use (overrides saved default for this run)
@@ -43,15 +43,15 @@ Environment variables:
   DEBUG=1              Print request/response debug info
 
 Examples:
-  aicommit
-  aicommit --model mistral
-  aicommit --anthropic --model claude-haiku-4-5-20251001
-  aicommit --openai --model codex-mini-latest
-  aicommit --cloud --model devstral-2
-  aicommit --setup
-  aicommit --reset
-  aicommit --reset --yes
-  ANTHROPIC_API_KEY=sk-ant-... aicommit
-  OPENAI_API_KEY=sk-... aicommit
-  OLLAMA_API_KEY=sk-... aicommit
+  penmit
+  penmit --model mistral
+  penmit --anthropic --model claude-haiku-4-5-20251001
+  penmit --openai --model codex-mini-latest
+  penmit --cloud --model devstral-2
+  penmit --setup
+  penmit --reset
+  penmit --reset --yes
+  ANTHROPIC_API_KEY=sk-ant-... penmit
+  OPENAI_API_KEY=sk-... penmit
+  OLLAMA_API_KEY=sk-... penmit
 `.trim();

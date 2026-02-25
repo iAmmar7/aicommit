@@ -104,7 +104,7 @@ export async function run(
       }
     }
     deleteUserConfig(configPath);
-    console.log('Settings reset. Run aicommit to configure again.');
+    console.log('Settings reset. Run penmit to configure again.');
     return;
   }
 
