@@ -93,7 +93,7 @@ export async function run(
   if (args.reset) {
     const configPath = getUserConfigPath();
     if (!existsSync(configPath)) {
-      console.log('No saved settings found — nothing to reset.');
+      console.log('No saved settings found - nothing to reset.');
       return;
     }
     if (!args.yes) {

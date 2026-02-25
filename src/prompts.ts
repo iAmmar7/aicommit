@@ -1,6 +1,6 @@
 // LLM prompts
 export const SYSTEM_PROMPT =
-  'You are a git commit message generator. Output ONLY the commit message line — no explanation, no description, no bullet points, no markdown, no preamble.';
+  'You are a git commit message generator. Output ONLY the commit message line - no explanation, no description, no bullet points, no markdown, no preamble.';
 
 export function getUserPrompt(diff: string): string {
   return `Write a single git commit message for the diff below using conventional commits format (feat, fix, chore, refactor, docs, style, test, etc).
@@ -18,7 +18,7 @@ ${diff}
 
 // CLI help text
 export const HELP_TEXT = `
-aicommit — AI-powered git commit message generator
+aicommit - AI-powered git commit message generator
 
 Usage:
   aicommit [options]

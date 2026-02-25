@@ -27,6 +27,7 @@ vi.mock('fs', async (importOriginal) => {
 
 const LOCAL_URL = 'http://localhost:11434/api/chat';
 const TAGS_URL = 'http://localhost:11434/api/tags';
+const DEFAULT_ARGS = { help: false, version: false, setup: false, reset: false, yes: false };
 
 describe('run', () => {
   let exitSpy: ReturnType<typeof vi.spyOn>;
@@ -50,13 +51,7 @@ describe('run', () => {
     errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     // Default: parsed args with no flags
-    vi.mocked(configModule.parseArgs).mockReturnValue({
-      help: false,
-      version: false,
-      setup: false,
-      reset: false,
-      yes: false,
-    });
+    vi.mocked(configModule.parseArgs).mockReturnValue(DEFAULT_ARGS);
 
     // Default: saved config has ollama/local + llama3.2 (no interactive needed)
     vi.mocked(configModule.readUserConfig).mockReturnValue({
@@ -64,7 +59,6 @@ describe('run', () => {
       ollamaMode: 'local',
       model: 'llama3.2',
     });
-    vi.mocked(configModule.writeUserConfig).mockImplementation(() => {});
 
     vi.mocked(ollamaModule.buildOllamaChatUrl).mockReturnValue(LOCAL_URL);
     vi.mocked(ollamaModule.buildOllamaTagsUrl).mockReturnValue(TAGS_URL);
@@ -85,7 +79,6 @@ describe('run', () => {
     vi.mocked(promptModule.promptInput).mockResolvedValue('');
     vi.mocked(promptModule.confirm).mockResolvedValue(true);
     vi.mocked(configModule.getUserConfigPath).mockReturnValue('/fake/.config/aicommit/config.json');
-    vi.mocked(configModule.deleteUserConfig).mockImplementation(() => true);
     vi.mocked(existsSync).mockReturnValue(false);
 
     vi.mocked(gitModule.getStagedDiff).mockReturnValue('diff --git a/foo.ts b/foo.ts\n+hello');
@@ -128,39 +121,21 @@ describe('run', () => {
     });
 
     it('prints help text and returns when --help is passed', async () => {
-      vi.mocked(configModule.parseArgs).mockReturnValue({
-        help: true,
-        version: false,
-        setup: false,
-        reset: false,
-        yes: false,
-      });
+      vi.mocked(configModule.parseArgs).mockReturnValue({ ...DEFAULT_ARGS, help: true });
       await run(['--help']);
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('aicommit'));
       expect(exitSpy).not.toHaveBeenCalled();
     });
 
     it('prints version from package.json when --version is passed', async () => {
-      vi.mocked(configModule.parseArgs).mockReturnValue({
-        help: false,
-        version: true,
-        setup: false,
-        reset: false,
-        yes: false,
-      });
+      vi.mocked(configModule.parseArgs).mockReturnValue({ ...DEFAULT_ARGS, version: true });
       await run(['--version']);
       expect(logSpy).toHaveBeenCalledWith(expect.any(String));
       expect(exitSpy).not.toHaveBeenCalled();
     });
 
     it('prints 0.0.0 when package.json cannot be read', async () => {
-      vi.mocked(configModule.parseArgs).mockReturnValue({
-        help: false,
-        version: true,
-        setup: false,
-        reset: false,
-        yes: false,
-      });
+      vi.mocked(configModule.parseArgs).mockReturnValue({ ...DEFAULT_ARGS, version: true });
       vi.mocked(readFileSync).mockImplementationOnce(() => {
         throw new Error('ENOENT: no such file or directory');
       });
@@ -171,13 +146,7 @@ describe('run', () => {
 
   describe('--reset', () => {
     it('prints "nothing to reset" when no config file exists', async () => {
-      vi.mocked(configModule.parseArgs).mockReturnValue({
-        help: false,
-        version: false,
-        setup: false,
-        reset: true,
-        yes: false,
-      });
+      vi.mocked(configModule.parseArgs).mockReturnValue({ ...DEFAULT_ARGS, reset: true });
       vi.mocked(existsSync).mockReturnValue(false);
 
       await run(['--reset']);
@@ -187,13 +156,7 @@ describe('run', () => {
     });
 
     it('prompts for confirmation and deletes config on yes', async () => {
-      vi.mocked(configModule.parseArgs).mockReturnValue({
-        help: false,
-        version: false,
-        setup: false,
-        reset: true,
-        yes: false,
-      });
+      vi.mocked(configModule.parseArgs).mockReturnValue({ ...DEFAULT_ARGS, reset: true });
       vi.mocked(existsSync).mockReturnValue(true);
       vi.mocked(promptModule.confirm).mockResolvedValue(true);
 
@@ -205,13 +168,7 @@ describe('run', () => {
     });
 
     it('aborts when user declines confirmation', async () => {
-      vi.mocked(configModule.parseArgs).mockReturnValue({
-        help: false,
-        version: false,
-        setup: false,
-        reset: true,
-        yes: false,
-      });
+      vi.mocked(configModule.parseArgs).mockReturnValue({ ...DEFAULT_ARGS, reset: true });
       vi.mocked(existsSync).mockReturnValue(true);
       vi.mocked(promptModule.confirm).mockResolvedValue(false);
 
@@ -223,9 +180,7 @@ describe('run', () => {
 
     it('--yes skips confirmation and deletes config', async () => {
       vi.mocked(configModule.parseArgs).mockReturnValue({
-        help: false,
-        version: false,
-        setup: false,
+        ...DEFAULT_ARGS,
         reset: true,
         yes: true,
       });
@@ -259,11 +214,7 @@ describe('run', () => {
 
     it('--local flag uses local provider without picker and does not save config', async () => {
       vi.mocked(configModule.parseArgs).mockReturnValue({
-        help: false,
-        version: false,
-        setup: false,
-        reset: false,
-        yes: false,
+        ...DEFAULT_ARGS,
         provider: 'ollama',
         ollamaMode: 'local',
       });
@@ -278,11 +229,7 @@ describe('run', () => {
 
     it('--cloud flag uses cloud provider without picker', async () => {
       vi.mocked(configModule.parseArgs).mockReturnValue({
-        help: false,
-        version: false,
-        setup: false,
-        reset: false,
-        yes: false,
+        ...DEFAULT_ARGS,
         provider: 'ollama',
         ollamaMode: 'cloud',
       });
@@ -319,13 +266,7 @@ describe('run', () => {
     });
 
     it('--setup forces interactive picker even when saved config exists', async () => {
-      vi.mocked(configModule.parseArgs).mockReturnValue({
-        help: false,
-        version: false,
-        setup: true,
-        reset: false,
-        yes: false,
-      });
+      vi.mocked(configModule.parseArgs).mockReturnValue({ ...DEFAULT_ARGS, setup: true });
       vi.mocked(configModule.readUserConfig).mockReturnValue({
         provider: 'ollama',
         ollamaMode: 'local',
@@ -383,14 +324,7 @@ describe('run', () => {
     });
 
     it('--model flag overrides saved model for this run only', async () => {
-      vi.mocked(configModule.parseArgs).mockReturnValue({
-        help: false,
-        version: false,
-        setup: false,
-        reset: false,
-        yes: false,
-        model: 'codellama',
-      });
+      vi.mocked(configModule.parseArgs).mockReturnValue({ ...DEFAULT_ARGS, model: 'codellama' });
       vi.mocked(configModule.readUserConfig).mockReturnValue({
         provider: 'ollama',
         ollamaMode: 'local',
@@ -490,14 +424,7 @@ describe('run', () => {
     });
 
     it('--anthropic flag uses anthropic provider without provider picker', async () => {
-      vi.mocked(configModule.parseArgs).mockReturnValue({
-        help: false,
-        version: false,
-        setup: false,
-        reset: false,
-        yes: false,
-        provider: 'anthropic',
-      });
+      vi.mocked(configModule.parseArgs).mockReturnValue({ ...DEFAULT_ARGS, provider: 'anthropic' });
       vi.mocked(configModule.readUserConfig).mockReturnValue({
         provider: 'anthropic',
         model: 'claude-sonnet-4-6',
@@ -569,14 +496,7 @@ describe('run', () => {
     });
 
     it('--openai flag uses openai provider without provider picker', async () => {
-      vi.mocked(configModule.parseArgs).mockReturnValue({
-        help: false,
-        version: false,
-        setup: false,
-        reset: false,
-        yes: false,
-        provider: 'openai',
-      });
+      vi.mocked(configModule.parseArgs).mockReturnValue({ ...DEFAULT_ARGS, provider: 'openai' });
       vi.mocked(configModule.readUserConfig).mockReturnValue({
         provider: 'openai',
         model: 'codex-mini-latest',
@@ -750,6 +670,64 @@ describe('run', () => {
       vi.mocked(gitModule.runCommit).mockReturnValue(1);
 
       await expect(run()).rejects.toThrow('process.exit(1)');
+    });
+  });
+
+  describe('provider / model resolution errors', () => {
+    it('exits with code 1 when resolveProvider throws an Error', async () => {
+      vi.mocked(configModule.readUserConfig).mockReturnValue({});
+      vi.mocked(promptModule.selectFromList).mockRejectedValue(new Error('picker cancelled'));
+
+      await expect(run()).rejects.toThrow('process.exit(1)');
+      expect(errorSpy).toHaveBeenCalledWith('picker cancelled');
+    });
+
+    it('exits with code 1 when resolveProvider throws a non-Error', async () => {
+      vi.mocked(configModule.readUserConfig).mockReturnValue({});
+      vi.mocked(promptModule.selectFromList).mockRejectedValue('plain string failure');
+
+      await expect(run()).rejects.toThrow('process.exit(1)');
+      expect(errorSpy).toHaveBeenCalledWith('plain string failure');
+    });
+
+    it('exits with code 1 when resolveAnthropicModel throws an Error', async () => {
+      vi.mocked(configModule.readUserConfig).mockReturnValue({});
+      vi.mocked(promptModule.selectFromList).mockRejectedValue(new Error('model picker failed'));
+
+      await expect(run([], { ANTHROPIC_API_KEY: 'sk-ant-test' })).rejects.toThrow(
+        'process.exit(1)',
+      );
+      expect(errorSpy).toHaveBeenCalledWith('model picker failed');
+    });
+
+    it('exits with code 1 when resolveAnthropicModel throws a non-Error', async () => {
+      vi.mocked(configModule.readUserConfig).mockReturnValue({});
+      vi.mocked(promptModule.selectFromList).mockRejectedValue('raw anthropic error');
+
+      await expect(run([], { ANTHROPIC_API_KEY: 'sk-ant-test' })).rejects.toThrow(
+        'process.exit(1)',
+      );
+      expect(errorSpy).toHaveBeenCalledWith('raw anthropic error');
+    });
+
+    it('exits with code 1 when resolveOpenAIModel throws an Error', async () => {
+      vi.mocked(configModule.readUserConfig).mockReturnValue({});
+      vi.mocked(promptModule.selectFromList).mockRejectedValue(new Error('model picker failed'));
+
+      await expect(run([], { OPENAI_API_KEY: 'sk-openai-test' })).rejects.toThrow(
+        'process.exit(1)',
+      );
+      expect(errorSpy).toHaveBeenCalledWith('model picker failed');
+    });
+
+    it('exits with code 1 when resolveOpenAIModel throws a non-Error', async () => {
+      vi.mocked(configModule.readUserConfig).mockReturnValue({});
+      vi.mocked(promptModule.selectFromList).mockRejectedValue('raw openai error');
+
+      await expect(run([], { OPENAI_API_KEY: 'sk-openai-test' })).rejects.toThrow(
+        'process.exit(1)',
+      );
+      expect(errorSpy).toHaveBeenCalledWith('raw openai error');
     });
   });
 });

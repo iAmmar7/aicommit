@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as readline from 'readline';
-import { promptUser, editMessage } from './tui.js';
+import { promptUser, editMessage, selectFromList, promptInput, confirm } from './tui.js';
 
 vi.mock('readline', async (importOriginal) => {
   const actual = await importOriginal<typeof import('readline')>();
@@ -146,6 +146,58 @@ describe('promptUser', () => {
   });
 });
 
+describe('promptUser (TTY mode)', () => {
+  let exitSpy: ReturnType<typeof vi.spyOn>;
+  let logSpy: ReturnType<typeof vi.spyOn>;
+  let writeSpy: ReturnType<typeof vi.spyOn>;
+  let resumeSpy: ReturnType<typeof vi.spyOn>;
+  let pauseSpy: ReturnType<typeof vi.spyOn>;
+  let setRawModeMock: ReturnType<typeof vi.fn>;
+  let originalIsTTY: boolean | undefined;
+  let originalSetRawMode: typeof process.stdin.setRawMode;
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    originalIsTTY = process.stdin.isTTY;
+    originalSetRawMode = process.stdin.setRawMode;
+    Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
+    setRawModeMock = vi.fn().mockReturnValue(process.stdin);
+    process.stdin.setRawMode = setRawModeMock as unknown as typeof process.stdin.setRawMode;
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
+      throw new Error(`process.exit(${code})`);
+    });
+    logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    writeSpy = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
+    resumeSpy = vi.spyOn(process.stdin, 'resume').mockReturnValue(process.stdin);
+    pauseSpy = vi.spyOn(process.stdin, 'pause').mockReturnValue(process.stdin);
+  });
+
+  afterEach(() => {
+    Object.defineProperty(process.stdin, 'isTTY', { value: originalIsTTY, configurable: true });
+    process.stdin.setRawMode = originalSetRawMode;
+    exitSpy.mockRestore();
+    logSpy.mockRestore();
+    writeSpy.mockRestore();
+    resumeSpy.mockRestore();
+    pauseSpy.mockRestore();
+    process.stdin.removeAllListeners('keypress');
+  });
+
+  it('calls setRawMode(true) on entry and setRawMode(false) on cleanup', async () => {
+    const promise = promptUser('feat: tty test');
+    process.stdin.emit('keypress', 'a', { name: 'a' });
+    await promise;
+    expect(setRawModeMock).toHaveBeenCalledWith(true);
+    expect(setRawModeMock).toHaveBeenCalledWith(false);
+  });
+
+  it("resolves 'accept' in TTY mode", async () => {
+    const promise = promptUser('feat: tty test');
+    process.stdin.emit('keypress', 'a', { name: 'a' });
+    expect(await promise).toBe('accept');
+  });
+});
+
 describe('editMessage', () => {
   let exitSpy: ReturnType<typeof vi.spyOn>;
   let logSpy: ReturnType<typeof vi.spyOn>;
@@ -225,5 +277,243 @@ describe('editMessage', () => {
     expect(() => {
       process.stdin.emit('keypress', '\u001b', { name: 'escape' });
     }).toThrow('process.exit(0)');
+  });
+
+  it('ignores non-escape key events', async () => {
+    mockRl.question.mockImplementation((_: string, cb: (a: string) => void) => {
+      // resolve after the ignored keypress
+      setImmediate(() => cb('fixed: message'));
+    });
+    const promise = editMessage('original');
+    process.stdin.emit('keypress', 'x', { name: 'x' });
+    expect(await promise).toBe('fixed: message');
+  });
+});
+
+describe('selectFromList (non-TTY)', () => {
+  let writeSpy: ReturnType<typeof vi.spyOn>;
+  let originalIsTTY: boolean | undefined;
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    originalIsTTY = process.stdin.isTTY;
+    Object.defineProperty(process.stdin, 'isTTY', { value: false, configurable: true });
+    writeSpy = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    Object.defineProperty(process.stdin, 'isTTY', { value: originalIsTTY, configurable: true });
+    writeSpy.mockRestore();
+  });
+
+  it('returns first item value without interactive prompt', async () => {
+    const items = [
+      { label: 'Local', value: 'local' },
+      { label: 'Cloud', value: 'cloud' },
+    ];
+    expect(await selectFromList('Provider:', items)).toBe('local');
+  });
+
+  it('writes question and first item label to stdout', async () => {
+    const items = [{ label: 'Local', value: 'local' }];
+    await selectFromList('Provider:', items);
+    expect(writeSpy).toHaveBeenCalledWith('Provider: Local\n');
+  });
+});
+
+describe('selectFromList (TTY)', () => {
+  let originalIsTTY: boolean | undefined;
+  let originalSetRawMode: typeof process.stdin.setRawMode;
+  let setRawModeMock: ReturnType<typeof vi.fn>;
+  let resumeSpy: ReturnType<typeof vi.spyOn>;
+  let pauseSpy: ReturnType<typeof vi.spyOn>;
+  let writeSpy: ReturnType<typeof vi.spyOn>;
+  let exitSpy: ReturnType<typeof vi.spyOn>;
+
+  const items = [
+    { label: 'Local', value: 'local' as const, hint: 'private' },
+    { label: 'Cloud', value: 'cloud' as const },
+    { label: 'Anthropic', value: 'anthropic' as const },
+  ];
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    originalIsTTY = process.stdin.isTTY;
+    originalSetRawMode = process.stdin.setRawMode;
+    Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
+    setRawModeMock = vi.fn().mockReturnValue(process.stdin);
+    process.stdin.setRawMode = setRawModeMock as unknown as typeof process.stdin.setRawMode;
+    resumeSpy = vi.spyOn(process.stdin, 'resume').mockReturnValue(process.stdin);
+    pauseSpy = vi.spyOn(process.stdin, 'pause').mockReturnValue(process.stdin);
+    writeSpy = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
+      throw new Error(`process.exit(${code})`);
+    });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(process.stdin, 'isTTY', { value: originalIsTTY, configurable: true });
+    process.stdin.setRawMode = originalSetRawMode;
+    resumeSpy.mockRestore();
+    pauseSpy.mockRestore();
+    writeSpy.mockRestore();
+    exitSpy.mockRestore();
+    process.stdin.removeAllListeners('keypress');
+  });
+
+  it('selects first item when Enter is pressed immediately', async () => {
+    const promise = selectFromList('Provider:', items);
+    process.stdin.emit('keypress', '\r', { name: 'return' });
+    expect(await promise).toBe('local');
+  });
+
+  it('moves selection down and selects on Enter', async () => {
+    const promise = selectFromList('Provider:', items);
+    process.stdin.emit('keypress', null, { name: 'down' });
+    process.stdin.emit('keypress', '\r', { name: 'return' });
+    expect(await promise).toBe('cloud');
+  });
+
+  it('wraps up from first item to last', async () => {
+    const promise = selectFromList('Provider:', items);
+    process.stdin.emit('keypress', null, { name: 'up' });
+    process.stdin.emit('keypress', '\r', { name: 'return' });
+    expect(await promise).toBe('anthropic');
+  });
+
+  it('wraps down from last item to first', async () => {
+    const promise = selectFromList('Provider:', items);
+    process.stdin.emit('keypress', null, { name: 'down' });
+    process.stdin.emit('keypress', null, { name: 'down' });
+    process.stdin.emit('keypress', null, { name: 'down' });
+    process.stdin.emit('keypress', '\r', { name: 'return' });
+    expect(await promise).toBe('local');
+  });
+
+  it('calls process.exit(0) when Ctrl+C is pressed', () => {
+    selectFromList('Provider:', items);
+    expect(() => {
+      process.stdin.emit('keypress', null, { name: 'c', ctrl: true });
+    }).toThrow('process.exit(0)');
+  });
+
+  it('calls process.exit(0) when Escape is pressed', () => {
+    selectFromList('Provider:', items);
+    expect(() => {
+      process.stdin.emit('keypress', null, { name: 'escape' });
+    }).toThrow('process.exit(0)');
+  });
+
+  it('ignores null key events', async () => {
+    const promise = selectFromList('Provider:', items);
+    process.stdin.emit('keypress', null, null);
+    process.stdin.emit('keypress', '\r', { name: 'return' });
+    expect(await promise).toBe('local');
+  });
+
+  it('ignores unrecognized key presses', async () => {
+    const promise = selectFromList('Provider:', items);
+    process.stdin.emit('keypress', 'x', { name: 'x' });
+    process.stdin.emit('keypress', '\r', { name: 'return' });
+    expect(await promise).toBe('local');
+  });
+
+  it('removes keypress listener and restores stdin after selection', async () => {
+    const before = process.stdin.listenerCount('keypress');
+    const promise = selectFromList('Provider:', items);
+    expect(process.stdin.listenerCount('keypress')).toBe(before + 1);
+    process.stdin.emit('keypress', '\r', { name: 'return' });
+    await promise;
+    expect(process.stdin.listenerCount('keypress')).toBe(before);
+    expect(setRawModeMock).toHaveBeenCalledWith(false);
+    expect(pauseSpy).toHaveBeenCalled();
+  });
+});
+
+describe('promptInput', () => {
+  let mockRl: { question: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockRl = { question: vi.fn(), close: vi.fn() };
+    vi.mocked(readline.createInterface).mockReturnValue(mockRl as unknown as readline.Interface);
+  });
+
+  it('returns trimmed answer', async () => {
+    mockRl.question.mockImplementation((_: string, cb: (a: string) => void) => cb('  hello  '));
+    expect(await promptInput('Name: ')).toBe('hello');
+  });
+
+  it('returns empty string when answer is blank', async () => {
+    mockRl.question.mockImplementation((_: string, cb: (a: string) => void) => cb('   '));
+    expect(await promptInput('Name: ')).toBe('');
+  });
+
+  it('closes the readline interface after answering', async () => {
+    mockRl.question.mockImplementation((_: string, cb: (a: string) => void) => cb('hi'));
+    await promptInput('Name: ');
+    expect(mockRl.close).toHaveBeenCalled();
+  });
+});
+
+describe('confirm', () => {
+  let mockRl: { question: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockRl = { question: vi.fn(), close: vi.fn() };
+    vi.mocked(readline.createInterface).mockReturnValue(mockRl as unknown as readline.Interface);
+  });
+
+  function answer(value: string) {
+    mockRl.question.mockImplementation((_: string, cb: (a: string) => void) => cb(value));
+  }
+
+  it("returns true for 'y'", async () => {
+    answer('y');
+    expect(await confirm('Delete?')).toBe(true);
+  });
+
+  it("returns true for 'yes'", async () => {
+    answer('yes');
+    expect(await confirm('Delete?')).toBe(true);
+  });
+
+  it("returns true for 'Y' (case-insensitive)", async () => {
+    answer('Y');
+    expect(await confirm('Delete?')).toBe(true);
+  });
+
+  it("returns true for 'YES' (case-insensitive)", async () => {
+    answer('YES');
+    expect(await confirm('Delete?')).toBe(true);
+  });
+
+  it('returns false for empty string', async () => {
+    answer('');
+    expect(await confirm('Delete?')).toBe(false);
+  });
+
+  it("returns false for 'n'", async () => {
+    answer('n');
+    expect(await confirm('Delete?')).toBe(false);
+  });
+
+  it("returns false for 'no'", async () => {
+    answer('no');
+    expect(await confirm('Delete?')).toBe(false);
+  });
+
+  it('appends [y/N] to the question', async () => {
+    answer('');
+    await confirm('Continue?');
+    expect(mockRl.question).toHaveBeenCalledWith(
+      expect.stringContaining('Continue?'),
+      expect.any(Function),
+    );
+    expect(mockRl.question).toHaveBeenCalledWith(
+      expect.stringContaining('[y/N]'),
+      expect.any(Function),
+    );
   });
 });
