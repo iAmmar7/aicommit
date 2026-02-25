@@ -1,22 +1,6 @@
 import type { Config } from './types.js';
 import { OllamaError } from './errors.js';
-
-const SYSTEM_PROMPT =
-  'You are a git commit message generator. Output ONLY the commit message line — no explanation, no description, no bullet points, no markdown, no preamble.';
-
-function getUserPrompt(diff: string): string {
-  return `Write a single git commit message for the diff below using conventional commits format (feat, fix, chore, refactor, docs, style, test, etc).
-
-Rules:
-- Output ONLY the commit message, nothing else
-- One line, no period at the end
-- No explanation, no bullet points, no numbering
-- Example output: feat: add user authentication
-
-<diff>
-${diff}
-</diff>`;
-}
+import { SYSTEM_PROMPT, getUserPrompt } from './prompts.js';
 
 export async function getLocalModels(
   tagsUrl: string,

@@ -9,6 +9,12 @@ export const LOCAL_OLLAMA_URL = `http://localhost:11434${OLLAMA_CHAT_PATH}`;
 export const CLOUD_OLLAMA_URL = `https://ollama.com${OLLAMA_CHAT_PATH}`;
 export const DEFAULT_CLOUD_MODEL = 'devstral-small-2:24b';
 
+export const ANTHROPIC_MODELS: { name: string; hint: string }[] = [
+  { name: 'claude-sonnet-4-6', hint: 'balanced — recommended' },
+  { name: 'claude-haiku-4-5-20251001', hint: 'fast & cheap — free tier friendly' },
+  { name: 'claude-opus-4-6', hint: 'most capable' },
+];
+
 export function getUserConfigPath(): string {
   const home = homedir();
   if (process.platform === 'win32') {
@@ -54,6 +60,9 @@ export function parseArgs(argv: string[]): ParsedArgs {
         break;
       case '--cloud':
         result.provider = 'cloud';
+        break;
+      case '--anthropic':
+        result.provider = 'anthropic';
         break;
       case '--setup':
         result.setup = true;
@@ -113,7 +122,7 @@ export function buildConfig(
 ): Config {
   return {
     provider,
-    ollamaUrl: buildOllamaChatUrl(provider, env),
+    ollamaUrl: provider === 'anthropic' ? '' : buildOllamaChatUrl(provider, env),
     model,
     apiKey,
     debug: env.DEBUG === '1',

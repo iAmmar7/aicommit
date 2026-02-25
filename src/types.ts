@@ -1,6 +1,6 @@
 export type UserChoice = 'accept' | 'regenerate' | 'edit';
 
-export type Provider = 'local' | 'cloud';
+export type Provider = 'local' | 'cloud' | 'anthropic';
 
 export interface Config {
   ollamaUrl: string;
