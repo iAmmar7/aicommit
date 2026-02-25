@@ -1,6 +1,6 @@
 # penmit
 
-> **penmit** = **pen** + com**mit** — a portmanteau for writing commit messages.
+> **penmit** = **pen** + com**mit** - a portmanteau for writing commit messages.
 
 AI-powered git commit message generator that writes conventional commit messages from your staged diff. Supports [Ollama](https://ollama.com) (local and cloud), [Anthropic](https://anthropic.com), and [OpenAI](https://openai.com).
 
