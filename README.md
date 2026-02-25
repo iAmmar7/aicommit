@@ -23,11 +23,11 @@ Provider: Local (Ollama) - Model: llama3.2
 
 ## Features
 
-- **Local-first** - runs entirely on your machine with any Ollama model, no data leaves your system; works fully offline
-- **Cloud support** - use Ollama Cloud, Anthropic (Claude), or OpenAI (Codex/GPT); your API key is read locally and used only for direct calls to the respective provider - never sent to any `penmit` server
-- **No vendor lock-in** - switch providers anytime with a single flag (`--local`, `--anthropic`, `--openai`) or re-run the setup wizard
-- **Staged diff only** - only reads what you've explicitly staged with `git add`; never touches the rest of your repo or working tree
-- **Zero workflow changes** - no git hooks, no config files to manage, no new commands to learn; just replace `git commit` with `penmit`
+- **Local-first** - any Ollama model, fully offline, no data leaves your machine
+- **Cloud support** - Ollama Cloud, Anthropic (Claude), or OpenAI; keys go directly to the provider, never to any `penmit` server
+- **No vendor lock-in** - switch providers anytime with a single flag
+- **Staged diff only** - only reads what you've staged; never touches your full repo
+- **Zero workflow changes** - just replace `git commit` with `penmit`
 - **Interactive prompt** - accept, regenerate, or edit the message before committing
 - **Conventional commits** - output follows the `type: description` format
 - **Setup wizard** - remembers your provider and model preference
