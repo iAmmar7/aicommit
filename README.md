@@ -1,12 +1,14 @@
 # penmit
 
-AI-powered git commit message generator that uses [Ollama](https://ollama.com) to write conventional commit messages from your staged diff - locally or via Ollama Cloud.
+> **penmit** = **pen** + com**mit** — a portmanteau for writing commit messages.
+
+AI-powered git commit message generator that writes conventional commit messages from your staged diff. Supports [Ollama](https://ollama.com) (local and cloud), [Anthropic](https://anthropic.com), and [OpenAI](https://openai.com).
 
 ```text
 $ git add .
-$ aicommit
+$ penmit
 
-Provider: Local - Model: llama3.2
+Provider: Local (Ollama) - Model: llama3.2
 ⠸ Generating commit message
 
   feat: add user authentication with JWT support
@@ -17,7 +19,7 @@ Provider: Local - Model: llama3.2
 ## Features
 
 - **Local-first** - runs entirely on your machine with any Ollama model, no data leaves your system
-- **Cloud support** - use Ollama Cloud by setting `OLLAMA_API_KEY`; the key is stored locally on your machine and is only sent to Ollama Cloud to authenticate requests
+- **Cloud support** - use Ollama Cloud, Anthropic (Claude), or OpenAI (Codex/GPT)
 - **Interactive prompt** - accept, regenerate, or edit the message before committing
 - **Conventional commits** - output follows the `type: description` format
 - **Setup wizard** - remembers your provider and model preference
@@ -36,7 +38,7 @@ npm install -g penmit
 
 ## Quick Start
 
-### Local mode
+### Local mode (Ollama)
 
 1. Install and start Ollama - follow the [official Ollama installation guide](https://ollama.com/download).
 
@@ -50,37 +52,73 @@ npm install -g penmit
 
    ```bash
    git add .
-   aicommit
+   penmit
    ```
 
    On first run, a setup wizard walks you through picking a provider and model. Your choice is saved and reused next time.
 
-### Cloud mode
+### Ollama Cloud mode
 
 Set your Ollama Cloud API key and run:
 
 ```bash
 export OLLAMA_API_KEY=your_key_here
 git add .
-aicommit
+penmit
 ```
 
 Or pass it inline for a one-off:
 
 ```bash
-OLLAMA_API_KEY=your_key aicommit
+OLLAMA_API_KEY=your_key penmit
+```
+
+### Anthropic (Claude)
+
+Set your Anthropic API key and run:
+
+```bash
+export ANTHROPIC_API_KEY=your_key_here
+git add .
+penmit
+```
+
+Or pass it inline:
+
+```bash
+ANTHROPIC_API_KEY=your_key penmit
+```
+
+### OpenAI (Codex / GPT)
+
+Set your OpenAI API key and run:
+
+```bash
+export OPENAI_API_KEY=your_key_here
+git add .
+penmit
+```
+
+Or pass it inline:
+
+```bash
+OPENAI_API_KEY=your_key penmit
 ```
 
 ## Usage
 
 ```text
-aicommit [options]
+penmit [options]
 
 Options:
   -m, --model <name>   Model to use (overrides saved default for this run)
   --local              Use local Ollama for this run
   --cloud              Use Ollama Cloud for this run
+  --anthropic          Use Anthropic (Claude) for this run
+  --openai             Use OpenAI for this run
   --setup              Re-run the setup wizard to change saved defaults
+  --reset              Delete saved settings and return to defaults
+  -y, --yes            Skip confirmation prompt (use with --reset)
   -v, --version        Print version
   -h, --help           Show this help
 ```
@@ -89,39 +127,59 @@ Options:
 
 ```bash
 # Use your saved defaults
-aicommit
+penmit
 
 # Override the model for this run only
-aicommit --model mistral
+penmit --model mistral
 
-# Force cloud with a specific model
-aicommit --cloud --model devstral-2
+# Force Ollama Cloud with a specific model
+penmit --cloud --model devstral-2
+
+# Use Anthropic for this run
+penmit --anthropic
+
+# Use OpenAI with a specific model
+penmit --openai --model gpt-4o
 
 # Re-run setup to switch provider or model
-aicommit --setup
+penmit --setup
+
+# Delete saved settings entirely
+penmit --reset
+
+# Delete saved settings without confirmation
+penmit --reset --yes
 ```
 
 ## Environment Variables
 
-| Variable         | Description                                                        |
-|------------------|--------------------------------------------------------------------|
-| `OLLAMA_API_KEY` | Enables Ollama Cloud. Overrides saved provider to `cloud`.         |
-| `OLLAMA_HOST`    | Custom local Ollama address (default: `localhost:11434`).          |
-| `DEBUG=1`        | Print raw request/response payloads for troubleshooting.           |
+| Variable            | Description                                                          |
+|---------------------|----------------------------------------------------------------------|
+| `ANTHROPIC_API_KEY` | Enables Anthropic (Claude). Overrides saved provider to `anthropic`. |
+| `OPENAI_API_KEY`    | Enables OpenAI. Overrides saved provider to `openai`.                |
+| `OLLAMA_API_KEY`    | Enables Ollama Cloud. Overrides saved provider to `cloud`.           |
+| `OLLAMA_HOST`       | Custom local Ollama address (default: `localhost:11434`).            |
+| `DEBUG=1`           | Print raw request/response payloads for troubleshooting.             |
 
 ## Configuration
 
 Provider and model preferences are saved to a config file after the first interactive run:
 
-| Platform       | Path                                  |
-|----------------|---------------------------------------|
-| macOS / Linux  | `~/.config/aicommit/config.json`      |
-| Windows        | `%APPDATA%\aicommit\config.json`      |
+| Platform       | Path                                 |
+|----------------|--------------------------------------|
+| macOS / Linux  | `~/.config/penmit/config.json`       |
+| Windows        | `%APPDATA%\penmit\config.json`       |
 
-To reset or change your defaults at any time:
+To change your saved defaults, re-run the setup wizard:
 
 ```bash
-aicommit --setup
+penmit --setup
+```
+
+To delete your saved settings entirely and start fresh:
+
+```bash
+penmit --reset
 ```
 
 ## Interactive Prompt
@@ -140,8 +198,8 @@ After a commit message is generated, you are given three options:
 Contributions are welcome. Please open an issue first to discuss significant changes.
 
 ```bash
-git clone https://github.com/iAmmar7/aicommit.git
-cd aicommit
+git clone https://github.com/iAmmar7/penmit.git
+cd penmit
 npm install
 npm run build
 npm test
