@@ -457,63 +457,73 @@ describe('promptInput', () => {
 });
 
 describe('confirm', () => {
-  let mockRl: { question: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn> };
+  let exitSpy: ReturnType<typeof vi.spyOn>;
+  let writeSpy: ReturnType<typeof vi.spyOn>;
+  let resumeSpy: ReturnType<typeof vi.spyOn>;
+  let pauseSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.resetAllMocks();
-    mockRl = { question: vi.fn(), close: vi.fn() };
-    vi.mocked(readline.createInterface).mockReturnValue(mockRl as unknown as readline.Interface);
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
+      throw new Error(`process.exit(${code})`);
+    });
+    writeSpy = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
+    resumeSpy = vi.spyOn(process.stdin, 'resume').mockReturnValue(process.stdin);
+    pauseSpy = vi.spyOn(process.stdin, 'pause').mockReturnValue(process.stdin);
+    Object.defineProperty(process.stdin, 'isTTY', { value: false, configurable: true });
   });
 
-  function answer(value: string) {
-    mockRl.question.mockImplementation((_: string, cb: (a: string) => void) => cb(value));
-  }
-
-  it("returns true for 'y'", async () => {
-    answer('y');
-    expect(await confirm('Delete?')).toBe(true);
+  afterEach(() => {
+    exitSpy.mockRestore();
+    writeSpy.mockRestore();
+    resumeSpy.mockRestore();
+    pauseSpy.mockRestore();
+    process.stdin.removeAllListeners('keypress');
   });
 
-  it("returns true for 'yes'", async () => {
-    answer('yes');
-    expect(await confirm('Delete?')).toBe(true);
+  it("returns true when 'y' is pressed", async () => {
+    const promise = confirm('Delete?');
+    process.stdin.emit('keypress', 'y', { name: 'y' });
+    expect(await promise).toBe(true);
   });
 
-  it("returns true for 'Y' (case-insensitive)", async () => {
-    answer('Y');
-    expect(await confirm('Delete?')).toBe(true);
+  it("returns true when 'Y' is pressed (case-insensitive)", async () => {
+    const promise = confirm('Delete?');
+    process.stdin.emit('keypress', 'Y', { name: 'y' });
+    expect(await promise).toBe(true);
   });
 
-  it("returns true for 'YES' (case-insensitive)", async () => {
-    answer('YES');
-    expect(await confirm('Delete?')).toBe(true);
+  it("returns false when 'n' is pressed", async () => {
+    const promise = confirm('Delete?');
+    process.stdin.emit('keypress', 'n', { name: 'n' });
+    expect(await promise).toBe(false);
   });
 
-  it('returns false for empty string', async () => {
-    answer('');
-    expect(await confirm('Delete?')).toBe(false);
+  it('returns false when Enter is pressed (default No)', async () => {
+    const promise = confirm('Delete?');
+    process.stdin.emit('keypress', '\r', { name: 'return' });
+    expect(await promise).toBe(false);
   });
 
-  it("returns false for 'n'", async () => {
-    answer('n');
-    expect(await confirm('Delete?')).toBe(false);
+  it('writes the question with [y/N] to stdout', async () => {
+    const promise = confirm('Continue?');
+    process.stdin.emit('keypress', 'n', { name: 'n' });
+    await promise;
+    expect(writeSpy).toHaveBeenCalledWith(expect.stringContaining('Continue?'));
+    expect(writeSpy).toHaveBeenCalledWith(expect.stringContaining('[y/N]'));
   });
 
-  it("returns false for 'no'", async () => {
-    answer('no');
-    expect(await confirm('Delete?')).toBe(false);
+  it('calls process.exit(0) when Escape is pressed', () => {
+    confirm('Delete?');
+    expect(() => {
+      process.stdin.emit('keypress', '\u001b', { name: 'escape' });
+    }).toThrow('process.exit(0)');
   });
 
-  it('appends [y/N] to the question', async () => {
-    answer('');
-    await confirm('Continue?');
-    expect(mockRl.question).toHaveBeenCalledWith(
-      expect.stringContaining('Continue?'),
-      expect.any(Function),
-    );
-    expect(mockRl.question).toHaveBeenCalledWith(
-      expect.stringContaining('[y/N]'),
-      expect.any(Function),
-    );
+  it('calls process.exit(0) when Ctrl+C is pressed', () => {
+    confirm('Delete?');
+    expect(() => {
+      process.stdin.emit('keypress', '\u0003', { name: 'c', ctrl: true });
+    }).toThrow('process.exit(0)');
   });
 });
