@@ -1,5 +1,10 @@
 # penmit
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![npm version](https://img.shields.io/npm/v/penmit.svg)](https://www.npmjs.com/package/penmit)
+[![Node.js >= 22](https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg)](https://nodejs.org)
+[![CI](https://github.com/iAmmar7/penmit/actions/workflows/ci.yml/badge.svg)](https://github.com/iAmmar7/penmit/actions/workflows/ci.yml)
+
 > **penmit** = **pen** + com**mit** - a portmanteau for writing commit messages.
 
 AI-powered git commit message generator that writes conventional commit messages from your staged diff. Supports [Ollama](https://ollama.com) (local and cloud), [Anthropic](https://anthropic.com), and [OpenAI](https://openai.com).
@@ -18,12 +23,16 @@ Provider: Local (Ollama) - Model: llama3.2
 
 ## Features
 
-- **Local-first** - runs entirely on your machine with any Ollama model, no data leaves your system
-- **Cloud support** - use Ollama Cloud, Anthropic (Claude), or OpenAI (Codex/GPT)
+- **Local-first** - runs entirely on your machine with any Ollama model, no data leaves your system; works fully offline
+- **Cloud support** - use Ollama Cloud, Anthropic (Claude), or OpenAI (Codex/GPT); your API key is read locally and used only for direct calls to the respective provider - never sent to any `penmit` server
+- **No vendor lock-in** - switch providers anytime with a single flag (`--local`, `--anthropic`, `--openai`) or re-run the setup wizard
+- **Staged diff only** - only reads what you've explicitly staged with `git add`; never touches the rest of your repo or working tree
+- **Zero workflow changes** - no git hooks, no config files to manage, no new commands to learn; just replace `git commit` with `penmit`
 - **Interactive prompt** - accept, regenerate, or edit the message before committing
 - **Conventional commits** - output follows the `type: description` format
 - **Setup wizard** - remembers your provider and model preference
 - **Zero runtime dependencies** - a single binary with no `node_modules` at runtime
+- **Open source** - MIT licensed and fully auditable on [GitHub](https://github.com/iAmmar7/penmit)
 
 > **Note:** The quality of the generated commit message depends entirely on the model you choose. Smaller or less capable models may produce vague, overly long, or incorrectly formatted messages. If the output looks off, try regenerating or switch to a more capable model.
 
