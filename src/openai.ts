@@ -20,7 +20,7 @@ export async function generateCommitMessage(
   const body = {
     model: config.model,
     instructions: SYSTEM_PROMPT,
-    input: getUserPrompt(diff),
+    input: getUserPrompt(diff, config.maxLength),
     max_output_tokens: 256,
     store: false,
   };

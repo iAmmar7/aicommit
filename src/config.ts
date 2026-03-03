@@ -4,6 +4,8 @@ import { dirname, join } from 'path';
 import type { Config, OllamaMode, ParsedArgs, Provider, UserConfig } from './types.js';
 import { buildOllamaChatUrl } from './ollama.js';
 
+export const DEFAULT_MAX_COMMIT_LENGTH = 72;
+
 export function getUserConfigPath(): string {
   const home = homedir();
   if (process.platform === 'win32') {
@@ -90,6 +92,16 @@ export function parseArgs(argv: string[]): ParsedArgs {
         i++;
         break;
       }
+      case '--max-length': {
+        const next = argv[i + 1];
+        const parsed = parseInt(next ?? '', 10);
+        if (!next || isNaN(parsed) || parsed < 1) {
+          throw new Error(`--max-length requires a positive integer (e.g. --max-length 72)`);
+        }
+        result.maxLength = parsed;
+        i++;
+        break;
+      }
       default:
         throw new Error(`Unknown option: ${arg}`);
     }
@@ -99,13 +111,20 @@ export function parseArgs(argv: string[]): ParsedArgs {
 }
 
 export function buildConfig(
+  env: Record<string, string | undefined> = process.env,
   {
     provider,
     ollamaMode,
     model,
     apiKey,
-  }: { provider: Provider; ollamaMode?: OllamaMode; model: string; apiKey?: string },
-  env: Record<string, string | undefined> = process.env,
+    maxLength,
+  }: {
+    provider: Provider;
+    ollamaMode?: OllamaMode;
+    model: string;
+    apiKey?: string;
+    maxLength?: number;
+  },
 ): Config {
   const resolvedMode = provider === 'ollama' ? (ollamaMode ?? 'local') : undefined;
   return {
@@ -115,5 +134,6 @@ export function buildConfig(
     model,
     apiKey,
     debug: env.DEBUG === '1',
+    maxLength: maxLength ?? DEFAULT_MAX_COMMIT_LENGTH,
   };
 }

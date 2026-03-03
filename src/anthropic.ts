@@ -22,7 +22,7 @@ export async function generateCommitMessage(
     model: config.model,
     max_tokens: 256,
     system: SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: getUserPrompt(diff) }],
+    messages: [{ role: 'user', content: getUserPrompt(diff, config.maxLength) }],
   };
 
   if (config.debug) {

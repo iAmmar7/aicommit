@@ -10,12 +10,14 @@ export interface Config {
   model: string;
   apiKey?: string;
   debug: boolean;
+  maxLength: number;
 }
 
 export interface ParsedArgs {
   provider?: Provider;
   ollamaMode?: OllamaMode;
   model?: string;
+  maxLength?: number;
   help: boolean;
   version: boolean;
   setup: boolean;
@@ -28,6 +30,7 @@ export interface UserConfig {
   ollamaMode?: OllamaMode;
   model?: string;
   apiKey?: string;
+  maxLength?: number;
 }
 
 export interface SpawnResult {

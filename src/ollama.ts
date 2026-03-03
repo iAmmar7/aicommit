@@ -71,7 +71,7 @@ export async function generateCommitMessage(
     model: config.model,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: getUserPrompt(diff) },
+      { role: 'user', content: getUserPrompt(diff, config.maxLength) },
     ],
     stream: false,
   };

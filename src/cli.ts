@@ -8,6 +8,7 @@ import {
   getUserConfigPath,
   readUserConfig,
   writeUserConfig,
+  DEFAULT_MAX_COMMIT_LENGTH,
 } from './config.js';
 import { GitError, LLMError } from './errors.js';
 import { getStagedDiff, runCommit } from './git.js';
@@ -56,12 +57,25 @@ const generators: Record<
   ollama: generateOllamaMessage,
 };
 
+
+function enforceCommitLength(message: string, maxLength: number): string {
+  const line = message.trim();
+  if (line.length <= maxLength) return line;
+
+  // Truncate at the last word boundary within the limit
+  const truncated = line.slice(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(' ');
+  const result = lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated;
+  console.warn(`Warning: commit message truncated to ${maxLength} characters.`);
+  return result;
+}
+
 async function generate(diff: string, config: ReturnType<typeof buildConfig>): Promise<string> {
   const spinner = createSpinner('Generating commit message');
   try {
     const message = await generators[config.provider](diff, config);
     spinner.stop();
-    return message;
+    return enforceCommitLength(message, config.maxLength);
   } catch (err) {
     spinner.stop();
     throw err;
@@ -191,19 +205,28 @@ export async function run(
     }
   }
 
+  const maxLength = args.maxLength ?? savedConfig.maxLength ?? DEFAULT_MAX_COMMIT_LENGTH;
+
   // Persist selection when interactive was used or a new API key was entered
   const apiKeyIsNew =
     (ollamaMode === 'cloud' || provider === 'anthropic' || provider === 'openai') &&
     !savedConfig.apiKey &&
     !!apiKey;
-  if (providerFromInteractive || modelFromInteractive || apiKeyIsNew) {
+  if (providerFromInteractive || modelFromInteractive || apiKeyIsNew || args.maxLength !== undefined) {
     const configToSave: UserConfig = { provider, model };
     if (provider === 'ollama') configToSave.ollamaMode = ollamaMode;
     if (apiKey !== undefined) configToSave.apiKey = apiKey;
+    if (args.maxLength !== undefined) configToSave.maxLength = args.maxLength;
     writeUserConfig(configToSave);
   }
 
-  const config = buildConfig({ provider, ollamaMode, model, apiKey }, env);
+  const config = buildConfig(env, {
+    provider,
+    ollamaMode,
+    model,
+    apiKey,
+    maxLength,
+  });
 
   console.log(`Provider: ${getProviderLabel(provider, ollamaMode)} - Model: ${model}`);
 
