@@ -57,7 +57,6 @@ const generators: Record<
   ollama: generateOllamaMessage,
 };
 
-
 function enforceCommitLength(message: string, maxLength: number): string {
   const line = message.trim();
   if (line.length <= maxLength) return line;
@@ -212,7 +211,12 @@ export async function run(
     (ollamaMode === 'cloud' || provider === 'anthropic' || provider === 'openai') &&
     !savedConfig.apiKey &&
     !!apiKey;
-  if (providerFromInteractive || modelFromInteractive || apiKeyIsNew || args.maxLength !== undefined) {
+  if (
+    providerFromInteractive ||
+    modelFromInteractive ||
+    apiKeyIsNew ||
+    args.maxLength !== undefined
+  ) {
     const configToSave: UserConfig = { provider, model };
     if (provider === 'ollama') configToSave.ollamaMode = ollamaMode;
     if (apiKey !== undefined) configToSave.apiKey = apiKey;
