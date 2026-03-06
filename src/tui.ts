@@ -72,7 +72,9 @@ export async function selectFromList<T>(question: string, items: SelectItem<T>[]
         cleanup();
         // Collapse menu to a single summary line
         process.stdout.write(`\x1b[${totalLines}A`);
-        process.stdout.write(`\r${colors.clearLine}${question} ${colors.cyan}${chosen.label}${colors.reset}\n`);
+        process.stdout.write(
+          `\r${colors.clearLine}${question} ${colors.cyan}${chosen.label}${colors.reset}\n`,
+        );
         for (let i = 0; i < items.length; i++) {
           process.stdout.write(`\r${colors.clearLine}\n`);
         }

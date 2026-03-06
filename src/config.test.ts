@@ -106,13 +106,21 @@ describe('parseArgs', () => {
   });
 
   it('throws when --max-length is not a positive integer', () => {
-    expect(() => parseArgs(['--max-length', '0'])).toThrow(/--max-length requires a positive integer/);
-    expect(() => parseArgs(['--max-length', '-5'])).toThrow(/--max-length requires a positive integer/);
-    expect(() => parseArgs(['--max-length', 'abc'])).toThrow(/--max-length requires a positive integer/);
+    expect(() => parseArgs(['--max-length', '0'])).toThrow(
+      /--max-length requires a positive integer/,
+    );
+    expect(() => parseArgs(['--max-length', '-5'])).toThrow(
+      /--max-length requires a positive integer/,
+    );
+    expect(() => parseArgs(['--max-length', 'abc'])).toThrow(
+      /--max-length requires a positive integer/,
+    );
   });
 
   it('throws when --max-length is followed by a flag', () => {
-    expect(() => parseArgs(['--max-length', '--help'])).toThrow(/--max-length requires a positive integer/);
+    expect(() => parseArgs(['--max-length', '--help'])).toThrow(
+      /--max-length requires a positive integer/,
+    );
   });
 
   it('throws on unknown option', () => {

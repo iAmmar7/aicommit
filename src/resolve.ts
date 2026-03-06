@@ -58,9 +58,7 @@ export async function resolveApiKey(
   if (key) return key;
 
   if (!process.stdin.isTTY) {
-    log.error(
-      `${label} provider requires ${envVarName}.\nSet it with: ${envVarName}=... penmit`,
-    );
+    log.error(`${label} provider requires ${envVarName}.\nSet it with: ${envVarName}=... penmit`);
     process.exit(1);
   }
 

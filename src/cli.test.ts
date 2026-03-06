@@ -111,7 +111,9 @@ describe('run', () => {
         throw new Error('Unknown option: --bad');
       });
       await expect(run(['--bad'])).rejects.toThrow('process.exit(1)');
-      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Error: Unknown option: --bad'));
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Error: Unknown option: --bad'),
+      );
     });
 
     it('exits with code 1 when parseArgs throws a non-Error', async () => {
@@ -339,7 +341,12 @@ describe('run', () => {
       expect(promptModule.selectFromList).not.toHaveBeenCalled();
       expect(configModule.buildConfig).toHaveBeenCalledWith(
         expect.any(Object),
-        expect.objectContaining({ provider: 'ollama', ollamaMode: 'local', model: 'codellama', apiKey: undefined }),
+        expect.objectContaining({
+          provider: 'ollama',
+          ollamaMode: 'local',
+          model: 'codellama',
+          apiKey: undefined,
+        }),
       );
       expect(configModule.writeUserConfig).not.toHaveBeenCalled();
     });
@@ -679,7 +686,8 @@ describe('run', () => {
 
   describe('commit message length enforcement', () => {
     it('truncates long commit messages at word boundary', async () => {
-      const longMessage = 'feat: this is a very long commit message that exceeds the default seventy-two character limit significantly';
+      const longMessage =
+        'feat: this is a very long commit message that exceeds the default seventy-two character limit significantly';
       vi.mocked(ollamaModule.generateCommitMessage).mockResolvedValue(longMessage);
       vi.mocked(promptModule.promptUser).mockResolvedValue('accept');
       vi.mocked(gitModule.runCommit).mockReturnValue(0);
@@ -704,7 +712,9 @@ describe('run', () => {
 
     it('respects custom --max-length from args', async () => {
       vi.mocked(configModule.parseArgs).mockReturnValue({ ...DEFAULT_ARGS, maxLength: 30 });
-      vi.mocked(ollamaModule.generateCommitMessage).mockResolvedValue('feat: a message longer than thirty chars here');
+      vi.mocked(ollamaModule.generateCommitMessage).mockResolvedValue(
+        'feat: a message longer than thirty chars here',
+      );
       vi.mocked(promptModule.promptUser).mockResolvedValue('accept');
       vi.mocked(gitModule.runCommit).mockReturnValue(0);
 
