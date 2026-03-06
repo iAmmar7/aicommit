@@ -2,13 +2,14 @@
 export const SYSTEM_PROMPT =
   'You are a git commit message generator. Output ONLY the commit message line - no explanation, no description, no bullet points, no markdown, no preamble.';
 
-export function getUserPrompt(diff: string): string {
+export function getUserPrompt(diff: string, maxLength = 72): string {
   return `Write a single git commit message for the diff below using conventional commits format (feat, fix, chore, refactor, docs, style, test, etc).
 
 Rules:
 - Output ONLY the commit message, nothing else
 - One line, no period at the end
 - No explanation, no bullet points, no numbering
+- Commit message must be ${maxLength} characters or fewer
 - Example output: feat: add user authentication
 
 <diff>
@@ -25,6 +26,7 @@ Usage:
 
 Options:
   -m, --model <name>   Model to use (overrides saved default for this run)
+  --max-length <n>     Max commit message length in characters (default: 72)
   --local              Use local Ollama for this run
   --cloud              Use Ollama Cloud for this run
   --anthropic          Use Anthropic (Claude) for this run
