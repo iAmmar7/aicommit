@@ -45,14 +45,12 @@ const BUILTIN_PATTERNS: CompiledPattern[] = [
   { name: 'Stripe Key', regex: /\b(sk_live_[A-Za-z0-9]{24,})\b/g },
   { name: 'Stripe Key', regex: /\b(rk_live_[A-Za-z0-9]{24,})\b/g },
 
-  // Private keys (PEM) — redact entire block between BEGIN and END markers
+  // Private keys (PEM) — redact from BEGIN to END marker, or to end of input if truncated
   {
     name: 'Private Key',
     regex:
-      /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/g,
+      /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----[\s\S]*?(?:-----END (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----|$)/g,
   },
-  // Catch standalone BEGIN header (e.g., truncated diffs missing the END marker)
-  { name: 'Private Key', regex: /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/g },
 
   // Bearer tokens in code
   { name: 'Bearer Token', regex: /Bearer\s+([A-Za-z0-9_\-.]{20,})/g },
@@ -65,13 +63,6 @@ const BUILTIN_PATTERNS: CompiledPattern[] = [
 
   // Google
   { name: 'Google API Key', regex: /\b(AIzaSy[A-Za-z0-9_-]{33})\b/g },
-
-  // Heroku — require contextual key name to avoid matching arbitrary UUIDs
-  {
-    name: 'Heroku Key',
-    regex:
-      /(?:HEROKU_API_KEY|HEROKU_AUTH_TOKEN|HEROKU_TOKEN)\s*[=:]\s*["']?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})["']?/gi,
-  },
 
   // npm tokens
   { name: 'npm Token', regex: /\b(npm_[A-Za-z0-9]{36,})\b/g },
@@ -94,14 +85,14 @@ export function compileCustomPatterns(defs: RedactPatternDef[]): CompiledPattern
 
 function applyPatterns(diff: string, patterns: CompiledPattern[]): RedactResult {
   let redacted = diff;
-  const found = new Set<string>();
+  let count = 0;
 
-  for (const { name, regex } of patterns) {
+  for (const { regex } of patterns) {
     // Reset lastIndex for global regexes
     regex.lastIndex = 0;
 
     redacted = redacted.replace(regex, (...args) => {
-      found.add(name);
+      count++;
       const fullMatch: string = args[0];
       // If there's a capture group (args[1] is a string and not the offset), redact only the captured part
       const captureGroup: unknown = args[1];
@@ -112,7 +103,7 @@ function applyPatterns(diff: string, patterns: CompiledPattern[]): RedactResult 
     });
   }
 
-  return { redacted, count: found.size };
+  return { redacted, count };
 }
 
 export function redactSecrets(diff: string, customPatterns: RedactPatternDef[] = []): RedactResult {

@@ -54,9 +54,13 @@ describe('redactSecrets', () => {
     expect(count).toBeGreaterThan(0);
   });
 
-  it('redacts standalone private key header when END marker is missing', () => {
-    const diff = '+-----BEGIN PRIVATE KEY-----';
+  it('redacts entire key body when END marker is missing (truncated diff)', () => {
+    const diff = `+-----BEGIN PRIVATE KEY-----
++MIIEpAIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8PbnGy5AHB
++dummybase64contenthere`;
     const { redacted, count } = redactSecrets(diff);
+    expect(redacted).not.toContain('MIIEpAIBAAKCAQEA0Z3VS5JJcds3xfn');
+    expect(redacted).not.toContain('dummybase64contenthere');
     expect(redacted).toContain('[REDACTED]');
     expect(count).toBeGreaterThan(0);
   });
@@ -110,17 +114,11 @@ describe('redactSecrets', () => {
     expect(count).toBeGreaterThan(0);
   });
 
-  it('redacts Heroku keys with contextual key name', () => {
-    const diff = '+HEROKU_API_KEY=12345678-1234-1234-1234-123456789abc';
-    const { redacted, count } = redactSecrets(diff);
-    expect(redacted).not.toContain('12345678-1234-1234-1234-123456789abc');
-    expect(count).toBeGreaterThan(0);
-  });
-
-  it('does not redact arbitrary UUIDs without Heroku context', () => {
+  it('does not redact arbitrary UUIDs', () => {
     const diff = '+user_id = "12345678-1234-1234-1234-123456789abc"';
-    const { redacted } = redactSecrets(diff);
+    const { redacted, count } = redactSecrets(diff);
     expect(redacted).toContain('12345678-1234-1234-1234-123456789abc');
+    expect(count).toBe(0);
   });
 
   it('does not match Anthropic keys with the OpenAI pattern', () => {
