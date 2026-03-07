@@ -1,7 +1,14 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
 import { dirname, join } from 'path';
-import type { Config, OllamaMode, ParsedArgs, Provider, UserConfig } from './types.js';
+import type {
+  Config,
+  OllamaMode,
+  ParsedArgs,
+  ProjectConfig,
+  Provider,
+  UserConfig,
+} from './types.js';
 import { buildOllamaChatUrl } from './ollama.js';
 
 export const DEFAULT_MAX_COMMIT_LENGTH = 72;
@@ -39,6 +46,7 @@ export function deleteUserConfig(configPath = getUserConfigPath()): boolean {
 
 export function parseArgs(argv: string[]): ParsedArgs {
   const result: ParsedArgs = {
+    noRedact: false,
     help: false,
     version: false,
     setup: false,
@@ -81,6 +89,9 @@ export function parseArgs(argv: string[]): ParsedArgs {
       case '--yes':
       case '-y':
         result.yes = true;
+        break;
+      case '--no-redact':
+        result.noRedact = true;
         break;
       case '--model':
       case '-m': {
@@ -135,4 +146,13 @@ export function buildConfig(
     apiKey,
     maxLength: maxLength ?? DEFAULT_MAX_COMMIT_LENGTH,
   };
+}
+
+export function readProjectConfig(cwd = process.cwd()): ProjectConfig {
+  try {
+    const raw = readFileSync(join(cwd, '.penmitrc.json'), 'utf8');
+    return JSON.parse(raw) as ProjectConfig;
+  } catch {
+    return {};
+  }
 }
