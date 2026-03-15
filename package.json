@@ -3,6 +3,7 @@
   "version": "2.2.0",
   "description": "AI-powered git commit message generator using Ollama, Anthropic, or OpenAI",
   "type": "module",
+  "main": "dist/index.js",
   "bin": {
     "penmit": "dist/index.js"
   },
